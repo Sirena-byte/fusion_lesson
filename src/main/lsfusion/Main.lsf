@@ -27,6 +27,7 @@ FORM editReception 'Приход'
     EDIT Reception OBJECT r
     ;
 
+
 //назначаем форму для отображения и редактирования свойств класса 
 FORM viewReception 'Приходы' //название формы и заголовок
     OBJECTS r = Reception //объект формы опция по умолчанию GRID
@@ -39,6 +40,25 @@ NAVIGATOR {
     NEW FOLDER move 'Движение' WINDOW toolbar FIRST {
         //новый пункт горизонтального меню
         NEW FORM viewReception; //в качестве подпункта меню Заголовок формы
+    }
+}
+//внутри программного кода создали 2 отдельных контейнера, каждый из которых будет отражать свою информацию. дополнительно для cntDoc установаили высоту в 60 px, это визуально отделило контейнеры на форме длуг от друга
+DESIGN editReception{
+    OBJECTS {
+        NEW cntDoc{
+            horizontal = TRUE ;//распределяем элементы слева направо и сверху вниз
+            caption = 'Накладная';
+            height = 60;
+            MOVE PROPERTY (number(r));
+            MOVE PROPERTY (date(r));
+        }
+        NEW cntRow{
+            horizontal = FALSE ;
+            caption = 'Строки накладной';
+            MOVE PROPERTY (name(r));
+            MOVE PROPERTY (quantity(r));
+            MOVE PROPERTY (price(r));
+        }
     }
 }
 
