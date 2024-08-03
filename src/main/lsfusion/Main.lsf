@@ -9,20 +9,30 @@ date 'Дата' = DATA DATE (Reception) NONULL ;
 name 'Наименвание' = DATA STRING[50] (Reception) NONULL ;
 quantity 'Количество' = DATA NUMERIC[10,3](Reception) NONULL ;
 price 'Цена' = DATA NUMERIC[10,2](Reception)NONULL ;
+userName 'Пользователь' = DATA STRING[50](Reception);
+userDate 'Дата ввода' = DATA DATE (Reception);
+
+//проверка на уникальность
+unique = GROUP AGGR Reception o BY number(o),date(o),name(o);
+//ограничение
+CONSTRAINT quantity(Reception o) > 1000 OR quantity(o)<0 MESSAGE 'Недопустимое количество';
+//простые события (автозаполнение даты)
+WHEN SET(Reception o IS Reception) AND NOT userDate(o) DO userDate(o) <- currentDate();
+//автозаполнение пользователя, который внес изменения
+WHEN SET(Reception o IS Reception) AND NOT userName(o) DO userName(o) <- STRING[50](currentUserName());
+
+FORM editReception 'Приход'
+    OBJECTS r = Reception PANEL //операция panel - только одна запись
+    PROPERTIES (r)number,date,name,quantity,price
+    EDIT Reception OBJECT r
+    ;
 
 //назначаем форму для отображения и редактирования свойств класса 
 FORM viewReception 'Приходы' //название формы и заголовок
-    OBJECTS r = Reception //объект формы
-    PROPERTIES (r) number,date,name,quantity,price //список свойств
-    PROPERTIES (r) NEW, DELETE //операторы работы с объектами
+    OBJECTS r = Reception //объект формы опция по умолчанию GRID
+    PROPERTIES (r) READONLY number,date,name,quantity,price,userName,userDate //список свойств
+    PROPERTIES (r) NEWSESSION NEW, EDIT ,DELETE //операторы работы с объектами (newsession означает, что действия будут производиться в новом окне)
 ;
-//проверка на уникальность
-unique = GROUP AGGR Reception o BY number(o),date(o),name(o);
-
-//ограничение
-CONSTRAINT quantity(Reception o) > 1000 OR quantity(o)<0 MESSAGE 'Недопустимое количество';
-
-
 
 //создаем пункт меню
 NAVIGATOR {
@@ -31,18 +41,5 @@ NAVIGATOR {
         NEW FORM viewReception; //в качестве подпункта меню Заголовок формы
     }
 }
-//новые свойства
-userName 'Пользователь' = DATA STRING[50](Reception);
-userDate 'Дата ввода' = DATA DATE (Reception);
-//расширяем форму
-EXTEND FORM viewReception
-    PROPERTIES (r) READONLY userName, userDate;
 
-//простые события (автозаполнение даты)
-WHEN SET(Reception o IS Reception) AND NOT userDate(o) DO userDate(o) <- currentDate();
 
-//использование событийных форм (заполнение свойства userName, который внес изменения
-EXTEND FORM viewReception
-    EVENTS ON APPLY {
-        IF NOT userName(r) THEN userName(r) <-STRING[50](currentUserName());
-    };
