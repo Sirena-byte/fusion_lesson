@@ -61,5 +61,55 @@ DESIGN editReception{
         }
     }
 }
+CLASS Organization 'Организация';
+name 'Организация' = DATA STRING[50](Organization)NONULL ;
 
+FORM viewOrganization 'Организации'
+    OBJECTS o = Organization
+    PROPERTIES (o) READONLY name
+    PROPERTIES (o) NEWSESSION NEW ,EDIT ,DELETE ;
+
+FORM editOrganization 'Организация'
+    OBJECTS o = Organization PANEL 
+    PROPERTIES (o) name
+    EDIT Organization OBJECT o;
+
+//эта форма будет выводиться как справочник
+FORM listOrganization 'Организации'
+    OBJECTS o = Organization
+    PROPERTIES (o) READONLY name
+    LIST Organization OBJECT o;//использование блока LIST превращает форму в форму выбора значения - типичный случай вызова формы справочника. как и обычная форма, форма выбора значения может иметь любые блоки, в том числе, можно указать опции редактирования. в этом случае вызовется форма, для которой определен блок EDIT (для данного примера - это форма editOrganization)
+
+NAVIGATOR {
+    move{
+        NEW FOLDER directory 'Справочники'{
+            NEW FORM viewOrganization;
+        }
+    }
+}
+//доработки связанные с Reception
+//===============================
+
+//новое свойство - ссылка на организацию
+organization = DATA Organization(Reception);
+//новое свойство organization для класса Reception, воззвращающее объект класса Organization. если идет обращение к свойству напрямую или через композицию, будет вызываться форма выбора, связанная с классом возвращаемого значения данного свойства. при этом свойство получит ссылку на выбранное значение( форма выбора listOrganization, определенная для выбора позиции среди объектов класса Organization)
+
+//композиция
+organizationName 'Поставщик' (Reception o) = name(organization(o));
+//использование композиции organizationName (композиция- это выражение одних свойсв через другие)
+EXTEND FORM  viewReception
+    PROPERTIES (r) READONLY organizationName AFTER date(r);
+//использование extend form  с опцией after для формы viewReception, с помощью которой новое свойство organizationName вставили в нужную позицию отображения между датой накладной и наименованием товара
+EXTEND FORM editReception
+    PROPERTIES (r) organizationName;
+DESIGN editReception{
+    OBJECTS {
+        NEW cntOrg AFTER cntDoc{
+            horizontal = TRUE ;
+            caption = 'Поставщик';
+            height = 60;
+            MOVE PROPERTY (organizationName(r)){caption = 'Фирма';}//заголовок свойства organizationName "поставщик" в дизайнере формы изменен на слово "фирма"
+        }
+    }
+}
 
