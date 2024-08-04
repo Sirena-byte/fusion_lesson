@@ -1,0 +1,78 @@
+MODULE Expenses;
+
+//необходимые для работы модули
+REQUIRE Documents,Authentication,Organization, Reception, Utils;
+
+//задаем общее пространство имен для всех документов
+NAMESPACE Documents;
+
+//наследуем сущность приходы от сущности Document
+CLASS Expenses 'Расходы':Document;
+
+//добавляем свойства, которых нет в базовой сущности
+//так как товар и цена берутся из прихода, то нужна композиция
+reception 'ID' = DATA Reception (Expenses) NONULL ;
+name 'Наименование' (Expenses o) = name(reception(o));
+price 'Цена' (Expenses o) = round(1.1 * price(reception(o)),2);//оптовая надбавка 1,1
+
+//композиция
+customer = DATA Organization(Expenses);
+organizationName 'Покупатель' (Expenses o) = name(customer(o));
+
+//контроль данных
+allExpenses (Reception r) = GROUP SUM quantity(Expenses e) BY reception(e) MATERIALIZED ;
+balance 'Остаток' (Reception r) = quantity(r) (-) allExpenses(r);
+CONSTRAINT balance(reception(Expenses o)) < 0 MESSAGE 'Расход превышает остаток';
+CONSTRAINT SETCHANGED(customer(Expenses o)) AND NOT organizationType(customer(o)) = OrganizationType.customer
+    CHECKED BY customer[Expenses] MESSAGE 'Для расходной накладной организация должна быть покупателем';
+
+//формы
+FORM editExpenses 'Расход'
+    OBJECTS e = Expenses PANEL 
+    PROPERTIES (e) number, date, organizationName, name, quantity, price
+        EDIT Expenses OBJECT e;
+
+FORM viewExpenses 'Расходы'
+    OBJECTS e = Expenses
+    PROPERTIES (e) READONLY number,date, organizationName, name, quantity,price,userName,userDate
+    PROPERTIES (e) NEWSESSION NEW , EDIT ,DELETE 
+    ORDERS date(e),number(e);
+
+DESIGN editExpenses{
+    OBJECTS {
+        NEW cntDoc{
+            horizontal = TRUE ;//распределяем элементы справа - налево, сверху - вниз
+            caption = 'Накладная';
+            height = 60;
+            MOVE PROPERTY (number(e));
+            MOVE PROPERTY (date(e));
+        }
+        NEW cntOrg{
+            horizontal = TRUE ;
+            caption = 'Покупатель';
+            height = 60;
+            MOVE PROPERTY (organizationName(e)) {caption = 'Магазин';}
+        }
+        NEW cntRow{
+            horizontal = FALSE ;
+            caption = 'Строки накладной';
+            MOVE PROPERTY (name(e));
+            MOVE PROPERTY (quantity(e));
+            MOVE PROPERTY (price(e));
+        }
+    }
+}
+
+FORM listReception 'Остатки' //форма выбора остатков
+    OBJECTS r = Reception
+    PROPERTIES (r) READONLY name, price,quantity,balance
+    LIST Reception OBJECT r
+    FILTERS balance(r);
+
+//задаем пункт меню
+NAVIGATOR {
+    documents{
+        NEW FORM viewExpenses;
+    }
+}
+

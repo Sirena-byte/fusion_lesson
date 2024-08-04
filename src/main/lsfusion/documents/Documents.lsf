@@ -1,0 +1,15 @@
+MODULE Documents;
+
+REQUIRE Time, Authentication, Organization;
+
+CLASS ABSTRACT Document 'Документ';
+number 'Номер' = DATA STRING[10](Document)NONULL ;
+date 'Дата' = DATA DATE (Document) NONULL ;
+quantity 'Количество' = DATA NUMERIC[10,3](Document) NONULL ;
+userDate 'Дата ввода' = DATA DATE (Document);
+userName 'Пользователь' = DATA STRING[50](Document);
+
+//контроль данных
+CONSTRAINT quantity(Document o) >1000 OR quantity(o) <= 0 MESSAGE 'Недопустимое количество';
+WHEN SET(Document o IS Document) AND NOT userDate(o) DO userDate(o) <- currentDate();
+WHEN SET(Document o IS Document) AND NOT userName(o) DO userName(o) <- STRING[50](name(currentUser()));

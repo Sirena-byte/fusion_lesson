@@ -1,46 +1,45 @@
 MODULE Reception;
+REQUIRE Documents, AppMenu, Organization;
 
-REQUIRE Time, Authentication, AppMenu, Organization;
+NAMESPACE Documents;
+//наследуем сущность приходы от сущности Document
+CLASS Reception 'Приходы' : Document;
 
-CLASS Reception 'Приходы';
+//добавляем свойства, которых нет в базовой сущности
+name 'Наименование' = DATA STRING[100](Reception) NONULL ;
+price 'Цена' = DATA NUMERIC[10,2] (Reception) NONULL ;
 
-number 'Номер' = DATA STRING[10] (Reception) NONULL;
-date 'Дата' = DATA DATE (Reception) NONULL;
-name 'Наименование' = DATA STRING[50] (Reception) NONULL;
-quantity 'Количество' = DATA NUMERIC[10,3] (Reception) NONULL;
-price 'Цена' = DATA NUMERIC[10,2] (Reception) NONULL;
-userDate 'Дата ввода' = DATA DATE (Reception);
-userName 'Пользователь' = DATA STRING[50] (Reception);
+//композиция
+supplier = DATA Organization(Reception);
+organizationName 'Поставщик'(Reception o) = name(supplier(o));
 
 // контроль данных
 unique = GROUP AGGR Reception o BY number(o), date(o), name(o);
-CONSTRAINT quantity(Reception o) > 1000 OR quantity(o) <= 0 MESSAGE 'Недопустимое количество';
+CONSTRAINT SETCHANGED(supplier(Reception o)) AND NOT organizationType(supplier(o)) = OrganizationType.supplier
+    CHECKED BY supplier[Reception] MESSAGE 'Для приходной накладной организация должна быть поставщиком';
 
-WHEN SET(Reception o IS Reception) AND NOT userDate(o) DO userDate(o) <- currentDate();
-WHEN SET(Reception o IS Reception) AND NOT userName(o) DO userName(o) <- STRING[50](name(currentUser()));
-
-organization = DATA Organization (Reception);
-organizationName 'Поставщик' (Reception o) = name(organization(o));
-
-CONSTRAINT SETCHANGED(organization(Reception o)) AND NOT organizationType(organization(o)) = OrganizationType.supplier
-    CHECKED BY organization[Reception] MESSAGE 'Для приходной накладной организация должна быть поставщиком';
-
+//формы
 FORM editReception 'Приход'
-    OBJECTS r = Reception PANEL // опция panel - только одна запись
-    PROPERTIES (r) number, date, organizationName, name, quantity, price
-    EDIT Reception OBJECT r
-;
+    OBJECTS r = Reception PANEL //опция panel - только одна запись
+    PROPERTIES (r) number, date, organizationName, name,quantity,price
+        EDIT Reception OBJECT r;
 
-DESIGN editReception {
+DESIGN editReception{
     OBJECTS {
-        NEW cntDoc {
-            horizontal = TRUE; // распределяем элементы слева-направо-сверху-вниз
+        NEW cntDoc{
+            horizontal = TRUE ; 
             caption = 'Накладная';
             height = 60;
             MOVE PROPERTY (number(r));
             MOVE PROPERTY (date(r));
         }
-        NEW cntRow {
+        NEW cntOrg{
+            horizontal = TRUE ;
+            caption = 'Поставщик';
+            height = 60;
+            MOVE PROPERTY (organizationName(r)) {caption = 'Фирма';}
+        }
+        NEW cntRow{
             horizontal = FALSE ;
             caption = 'Строки накладной';
             MOVE PROPERTY (name(r));
@@ -51,15 +50,15 @@ DESIGN editReception {
 }
 
 FORM viewReception 'Приходы'
-    OBJECTS r = Reception // опция по умолчанию GRID    
-    PROPERTIES (r) READONLY number, date, organizationName, name, quantity, price, userName, userDate
-    PROPERTIES (r) NEWSESSION NEW, EDIT, DELETE
-;
+    OBJECTS r = Reception
+    PROPERTIES (r) READONLY number,date,organizationName,name,quantity,price,userName,userDate
+    PROPERTIES (r) NEWSESSION NEW ,EDIT ,DELETE ;
 
-
+//навигатор
 NAVIGATOR {
-    documents { 
-        NEW FORM viewReception;  
+    documents{
+        NEW FORM viewReception;
     }
 }
+
 
