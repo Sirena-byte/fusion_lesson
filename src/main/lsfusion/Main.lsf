@@ -113,3 +113,21 @@ DESIGN editReception{
     }
 }
 
+//доработки для использования статических объектов
+CLASS OrganizationType 'Тип организации'{
+    supplier 'Поставщик', customer 'Покупатель'
+}
+//класс OrganizationType включает в себя два статических объекта : supplier и customer
+organizationType 'ID' = DATA OrganizationType (Organization) NONULL ;
+organizationTypeName 'Тип организации'(Organization o) = staticCaption(organizationType(o));
+
+EXTEND FORM viewOrganization
+    PROPERTIES (o) READONLY organizationTypeName;
+
+EXTEND FORM editOrganization
+    PROPERTIES (o) organizationTypeName;
+
+CONSTRAINT SETCHANGED(organization(Reception o)) AND 
+    NOT organizationType(organization(o)) = OrganizationType.supplier
+    CHECKED BY organization[Reception]
+    MESSAGE 'Для приходной накладной организация должна быть поставщиком';
