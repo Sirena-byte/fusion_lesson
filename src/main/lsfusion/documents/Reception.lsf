@@ -1,0 +1,65 @@
+MODULE Reception;
+
+REQUIRE Time, Authentication, AppMenu, Organization;
+
+CLASS Reception 'Приходы';
+
+number 'Номер' = DATA STRING[10] (Reception) NONULL;
+date 'Дата' = DATA DATE (Reception) NONULL;
+name 'Наименование' = DATA STRING[50] (Reception) NONULL;
+quantity 'Количество' = DATA NUMERIC[10,3] (Reception) NONULL;
+price 'Цена' = DATA NUMERIC[10,2] (Reception) NONULL;
+userDate 'Дата ввода' = DATA DATE (Reception);
+userName 'Пользователь' = DATA STRING[50] (Reception);
+
+// контроль данных
+unique = GROUP AGGR Reception o BY number(o), date(o), name(o);
+CONSTRAINT quantity(Reception o) > 1000 OR quantity(o) <= 0 MESSAGE 'Недопустимое количество';
+
+WHEN SET(Reception o IS Reception) AND NOT userDate(o) DO userDate(o) <- currentDate();
+WHEN SET(Reception o IS Reception) AND NOT userName(o) DO userName(o) <- STRING[50](name(currentUser()));
+
+organization = DATA Organization (Reception);
+organizationName 'Поставщик' (Reception o) = name(organization(o));
+
+CONSTRAINT SETCHANGED(organization(Reception o)) AND NOT organizationType(organization(o)) = OrganizationType.supplier
+    CHECKED BY organization[Reception] MESSAGE 'Для приходной накладной организация должна быть поставщиком';
+
+FORM editReception 'Приход'
+    OBJECTS r = Reception PANEL // опция panel - только одна запись
+    PROPERTIES (r) number, date, organizationName, name, quantity, price
+    EDIT Reception OBJECT r
+;
+
+DESIGN editReception {
+    OBJECTS {
+        NEW cntDoc {
+            horizontal = TRUE; // распределяем элементы слева-направо-сверху-вниз
+            caption = 'Накладная';
+            height = 60;
+            MOVE PROPERTY (number(r));
+            MOVE PROPERTY (date(r));
+        }
+        NEW cntRow {
+            horizontal = FALSE ;
+            caption = 'Строки накладной';
+            MOVE PROPERTY (name(r));
+            MOVE PROPERTY (quantity(r));
+            MOVE PROPERTY (price(r));
+        }
+    }
+}
+
+FORM viewReception 'Приходы'
+    OBJECTS r = Reception // опция по умолчанию GRID    
+    PROPERTIES (r) READONLY number, date, organizationName, name, quantity, price, userName, userDate
+    PROPERTIES (r) NEWSESSION NEW, EDIT, DELETE
+;
+
+
+NAVIGATOR {
+    documents { 
+        NEW FORM viewReception;  
+    }
+}
+

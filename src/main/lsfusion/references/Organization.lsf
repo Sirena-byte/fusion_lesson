@@ -1,0 +1,40 @@
+MODULE Organization;
+
+REQUIRE AppMenu;
+
+CLASS OrganizationType 'Тип организации' {
+    supplier 'Поставщик', customer 'Покупатель'
+}
+
+CLASS Organization 'Организации';
+name 'Организация' = DATA STRING[50] (Organization) NONULL ;
+
+organizationType 'ID' = DATA OrganizationType (Organization) NONULL;
+organizationTypeName 'Тип организации' (Organization o) = staticCaption(organizationType(o));
+
+FORM viewOrgaization 'Организации'
+    OBJECTS o = Organization
+    PROPERTIES (o) READONLY name, organizationTypeName
+    PROPERTIES (o) NEWSESSION NEW, EDIT, DELETE
+;
+
+FORM editOrgaization 'Организация'
+    OBJECTS o = Organization PANEL
+    PROPERTIES (o) name, organizationTypeName
+    EDIT Organization OBJECT o
+;
+
+FORM listOrgaization 'Организации'
+    OBJECTS o = Organization
+    PROPERTIES (o) READONLY name
+    LIST Organization OBJECT o
+;
+
+NAVIGATOR {
+    move {
+        NEW FOLDER directory 'Справочники' {
+            NEW FORM viewOrgaization;
+        }
+    }
+}
+
